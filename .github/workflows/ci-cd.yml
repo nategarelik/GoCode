@@ -6,6 +6,16 @@ on:
     tags: [ 'v*' ]
   pull_request:
     branches: [ main, develop ]
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Environment to deploy/rollback'
+        required: true
+        default: 'staging'
+        type: choice
+        options:
+          - staging
+          - production
 
 env:
   REGISTRY: ghcr.io
@@ -432,16 +442,3 @@ jobs:
               ]
             }]
           }
-
-# Manual trigger for rollback
-on:
-  workflow_dispatch:
-    inputs:
-      environment:
-        description: 'Environment to rollback'
-        required: true
-        default: 'staging'
-        type: choice
-        options:
-        - staging
-        - production
