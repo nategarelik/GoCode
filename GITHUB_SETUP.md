@@ -7,7 +7,7 @@ To publish this production-ready Claude Code UI to your GitHub account, follow t
 ### 1. Create a New Repository on GitHub
 
 1. Go to https://github.com/new
-2. Repository name: `claudecodeui`
+2. Repository name: `GoCode`
 3. Description: "Production-ready web interface for Claude Code - Access your AI coding assistant from any device"
 4. Make it **Public** (required for GitHub Pages)
 5. **DO NOT** initialize with README, .gitignore, or license (we already have these)
@@ -33,7 +33,7 @@ If you get a authentication error, you'll need to:
 
 To host a static version:
 
-1. Go to your repository settings: https://github.com/nategarelik/claudecodeui/settings
+1. Go to your repository settings: https://github.com/nategarelik/GoCode/settings
 2. Scroll to "Pages" section
 3. Source: Deploy from a branch
 4. Branch: main
@@ -54,7 +54,7 @@ If you want to use the automated deployment pipelines:
 
 After pushing, you can:
 
-- **Clone on any device**: `git clone https://github.com/nategarelik/claudecodeui.git`
+- **Clone on any device**: `git clone https://github.com/nategarelik/GoCode.git`
 - **Run locally**: `npm install && npm start`
 - **Access at**: http://localhost:3008
 
