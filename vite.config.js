@@ -8,7 +8,11 @@ export default defineConfig(({ command, mode }) => {
   const isDev = command === 'serve'
   const isProd = command === 'build'
   
+  // Determine base URL for GitHub Pages or local development
+  const base = process.env.GITHUB_PAGES ? '/GoCode/' : '/'
+  
   return {
+    base,
     plugins: [
       react({
         // Enable Fast Refresh for better development experience
