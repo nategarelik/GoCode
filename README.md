@@ -1,10 +1,14 @@
 <div align="center">
   <img src="public/logo.svg" alt="Claude Code UI" width="64" height="64">
-  <h1>Claude Code UI</h1>
+  <h1>Claude Code UI 🤖</h1>
+  
+  [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+  [![Node.js Version](https://img.shields.io/badge/node-%3E%3D18.0.0-brightgreen)](https://nodejs.org)
+  [![React](https://img.shields.io/badge/React-18.2.0-blue)](https://reactjs.org)
+  [![Vite](https://img.shields.io/badge/Vite-4.5.0-purple)](https://vitejs.dev)
 </div>
 
-
-A desktop and mobile UI for [Claude Code](https://docs.anthropic.com/en/docs/claude-code), Anthropic's official CLI for AI-assisted coding. You can use it locally or remotely to view your active projects and sessions in claude code and make changes to them the same way you would do it in claude code CLI. This gives you a proper interface that works everywhere. 
+A production-ready, full-featured web interface for [Claude Code](https://docs.anthropic.com/en/docs/claude-code), Anthropic's official CLI for AI-assisted coding. Access your AI coding assistant from any device with a modern, responsive interface that works locally or remotely. 
 
 ## Screenshots
 
