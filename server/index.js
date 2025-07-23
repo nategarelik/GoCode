@@ -41,8 +41,12 @@ import { spawnClaude, abortClaudeSession } from './claude-cli.js';
 import gitRoutes from './routes/git.js';
 import authRoutes from './routes/auth.js';
 import mcpRoutes from './routes/mcp.js';
+import analyticsRoutes from './routes/analytics.js';
+import { router as claudeFlowRoutes, setupWebSocketServer as setupClaudeFlowWS } from './routes/claude-flow.js';
 import { initializeDatabase } from './database/db.js';
 import { validateApiKey, authenticateToken, authenticateWebSocket } from './middleware/auth.js';
+import { trackUsage, trackPerformance } from './middleware/analytics.js';
+import alertService from './services/alertService.js';
 
 // File system watcher for projects folder
 let projectsWatcher = null;
@@ -174,6 +178,15 @@ app.use('/api/git', authenticateToken, gitRoutes);
 
 // MCP API Routes (protected)
 app.use('/api/mcp', authenticateToken, mcpRoutes);
+
+// Analytics API Routes (protected) - Add tracking middleware
+app.use('/api/analytics', authenticateToken, analyticsRoutes);
+
+// Claude-Flow API Routes (protected)
+app.use('/api/claude-flow', authenticateToken, claudeFlowRoutes);
+
+// Add analytics tracking to Claude API calls
+app.use('/api/claude', authenticateToken, trackUsage);
 
 // Static files served after API routes
 app.use(express.static(path.join(__dirname, '../dist')));
@@ -434,6 +447,9 @@ wss.on('connection', (ws, request) => {
   const urlObj = new URL(url, 'http://localhost');
   const pathname = urlObj.pathname;
   
+  // Attach user info to the WebSocket connection
+  ws.user = request.user;
+  
   if (pathname === '/shell') {
     handleShellConnection(ws);
   } else if (pathname === '/ws') {
@@ -451,6 +467,9 @@ function handleChatConnection(ws) {
   // Add to connected clients for project updates
   connectedClients.add(ws);
   
+  // Add to alert service for alert notifications
+  alertService.addClient(ws);
+  
   ws.on('message', async (message) => {
     try {
       const data = JSON.parse(message);
@@ -459,7 +478,12 @@ function handleChatConnection(ws) {
         console.log('💬 User message:', data.command || '[Continue/Resume]');
         console.log('📁 Project:', data.options?.projectPath || 'Unknown');
         console.log('🔄 Session:', data.options?.sessionId ? 'Resume' : 'New');
-        await spawnClaude(data.command, data.options, ws);
+        // Add userId to options
+        const optionsWithUser = {
+          ...data.options,
+          userId: ws.user?.id
+        };
+        await spawnClaude(data.command, optionsWithUser, ws);
       } else if (data.type === 'abort-session') {
         console.log('🛑 Abort session request:', data.sessionId);
         const success = abortClaudeSession(data.sessionId);
@@ -482,6 +506,8 @@ function handleChatConnection(ws) {
     console.log('🔌 Chat client disconnected');
     // Remove from connected clients
     connectedClients.delete(ws);
+    // Remove from alert service
+    alertService.removeClient(ws);
   });
 }
 
@@ -987,6 +1013,14 @@ async function startServer() {
       
       // Start watching the projects folder for changes
       await setupProjectsWatcher(); // Re-enabled with better-sqlite3
+      
+      // Start alert service
+      alertService.start();
+      console.log('✅ Alert monitoring service started');
+      
+      // Setup Claude-Flow WebSocket server
+      setupClaudeFlowWS(server);
+      console.log('✅ Claude-Flow WebSocket server started');
     });
   } catch (error) {
     console.error('❌ Failed to start server:', error);

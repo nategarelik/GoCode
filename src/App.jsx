@@ -25,13 +25,17 @@ import MainContent from './components/MainContent';
 import MobileNav from './components/MobileNav';
 import ToolsSettings from './components/ToolsSettings';
 import QuickSettingsPanel from './components/QuickSettingsPanel';
+import AlertNotification from './components/AlertNotification';
 
 import { useWebSocket } from './utils/websocket';
 import { ThemeProvider } from './contexts/ThemeContext';
 import { AuthProvider } from './contexts/AuthContext';
 import ProtectedRoute from './components/ProtectedRoute';
+import SkipNavigation from './components/SkipNavigation';
+import ServiceWorkerManager, { PWAInstallPrompt } from './components/ServiceWorkerManager';
 import { useVersionCheck } from './hooks/useVersionCheck';
 import { api } from './utils/api';
+import { initWebVitalsReporting } from './utils/performance';
 
 
 // Main App component with routing
@@ -74,7 +78,17 @@ function AppContent() {
   // until the conversation completes or is aborted.
   const [activeSessions, setActiveSessions] = useState(new Set()); // Track sessions with active conversations
   
-  const { ws, sendMessage, messages } = useWebSocket();
+  // Analytics alerts
+  const [triggeredAlerts, setTriggeredAlerts] = useState(null);
+  
+  // Handle WebSocket messages including alerts
+  const handleWebSocketMessage = (message) => {
+    if (message.type === 'alerts-triggered') {
+      setTriggeredAlerts(message.alerts);
+    }
+  };
+  
+  const { ws, sendMessage, messages } = useWebSocket(handleWebSocketMessage);
 
   useEffect(() => {
     const checkMobile = () => {
@@ -84,12 +98,31 @@ function AppContent() {
     checkMobile();
     window.addEventListener('resize', checkMobile);
     
-    return () => window.removeEventListener('resize', checkMobile);
+    // Listen for analytics navigation events
+    const handleNavigateToAnalytics = (event) => {
+      setActiveTab('analytics');
+      // You can also handle the specific view here if needed
+    };
+    
+    window.addEventListener('navigate-to-analytics', handleNavigateToAnalytics);
+    
+    return () => {
+      window.removeEventListener('resize', checkMobile);
+      window.removeEventListener('navigate-to-analytics', handleNavigateToAnalytics);
+    };
   }, []);
 
   useEffect(() => {
     // Fetch projects on component mount
     fetchProjects();
+    
+    // Initialize Web Vitals reporting
+    const webVitals = initWebVitalsReporting();
+    
+    // Cleanup function
+    return () => {
+      // Clean up any listeners if needed
+    };
   }, []);
 
   // Helper function to determine if an update is purely additive (new sessions/projects)
@@ -497,7 +530,9 @@ function AppContent() {
   };
 
   return (
-    <div className="fixed inset-0 flex bg-background">
+    <>
+      <SkipNavigation />
+      <div className="fixed inset-0 flex bg-background" id="main-app">
       {/* Fixed Desktop Sidebar */}
       {!isMobile && (
         <div className="w-80 flex-shrink-0 border-r border-border bg-card">
@@ -569,7 +604,7 @@ function AppContent() {
       )}
 
       {/* Main Content Area - Flexible */}
-      <div className="flex-1 flex flex-col min-w-0">
+      <div className="flex-1 flex flex-col min-w-0" id="main-content">
         <MainContent
           selectedProject={selectedProject}
           selectedSession={selectedSession}
@@ -639,7 +674,25 @@ function AppContent() {
 
       {/* Version Upgrade Modal */}
       <VersionUpgradeModal />
+      
+      {/* Alert Notifications */}
+      {triggeredAlerts && (
+        <AlertNotification
+          alerts={triggeredAlerts}
+          onDismiss={() => setTriggeredAlerts(null)}
+        />
+      )}
+      
+      {/* Service Worker Management */}
+      <ServiceWorkerManager 
+        enableNotifications={true}
+        enableAutoUpdate={false}
+      />
+      
+      {/* PWA Install Prompt */}
+      <PWAInstallPrompt />
     </div>
+    </>
   );
 }
 

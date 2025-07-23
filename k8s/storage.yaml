@@ -1,0 +1,49 @@
+apiVersion: storage.k8s.io/v1
+kind: StorageClass
+metadata:
+  name: claudecodeui-ssd
+  labels:
+    app.kubernetes.io/name: claudecodeui
+    app.kubernetes.io/component: storage
+provisioner: kubernetes.io/aws-ebs  # Change based on your cloud provider
+parameters:
+  type: gp3
+  fsType: ext4
+  encrypted: "true"
+volumeBindingMode: WaitForFirstConsumer
+allowVolumeExpansion: true
+reclaimPolicy: Retain
+
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: claudecodeui-data
+  namespace: claudecodeui
+  labels:
+    app.kubernetes.io/name: claudecodeui
+    app.kubernetes.io/component: storage
+spec:
+  accessModes:
+  - ReadWriteOnce
+  storageClassName: claudecodeui-ssd
+  resources:
+    requests:
+      storage: 10Gi
+
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: claudecodeui-backup
+  namespace: claudecodeui
+  labels:
+    app.kubernetes.io/name: claudecodeui
+    app.kubernetes.io/component: backup
+spec:
+  accessModes:
+  - ReadWriteOnce
+  storageClassName: claudecodeui-ssd
+  resources:
+    requests:
+      storage: 50Gi

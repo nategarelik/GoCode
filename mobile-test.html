@@ -1,0 +1,375 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>Claude Code UI - Mobile Test</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #f3f4f6;
+            padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
+        }
+
+        .container {
+            max-width: 100%;
+            padding: 20px;
+        }
+
+        .header {
+            background: white;
+            padding: 20px;
+            border-radius: 12px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+
+        .test-section {
+            background: white;
+            padding: 20px;
+            border-radius: 12px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+
+        .test-section h2 {
+            margin-bottom: 15px;
+            color: #1f2937;
+        }
+
+        .test-button {
+            display: block;
+            width: 100%;
+            padding: 15px;
+            margin: 10px 0;
+            background: #3b82f6;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            -webkit-tap-highlight-color: transparent;
+            touch-action: manipulation;
+            min-height: 44px; /* iOS recommended touch target */
+        }
+
+        .test-button:active {
+            background: #2563eb;
+            transform: scale(0.98);
+        }
+
+        .info-box {
+            background: #f0f9ff;
+            border: 1px solid #3b82f6;
+            padding: 15px;
+            border-radius: 8px;
+            margin: 10px 0;
+        }
+
+        .viewport-info {
+            font-family: monospace;
+            background: #f3f4f6;
+            padding: 10px;
+            border-radius: 4px;
+            margin-top: 10px;
+        }
+
+        .touch-area {
+            background: #fef3c7;
+            border: 2px dashed #f59e0b;
+            padding: 40px;
+            text-align: center;
+            border-radius: 8px;
+            margin: 20px 0;
+            touch-action: none;
+        }
+
+        .status {
+            padding: 10px;
+            border-radius: 8px;
+            margin-top: 10px;
+            text-align: center;
+            font-weight: 600;
+        }
+
+        .status.success {
+            background: #d1fae5;
+            color: #065f46;
+        }
+
+        .status.error {
+            background: #fee2e2;
+            color: #991b1b;
+        }
+
+        @media (prefers-color-scheme: dark) {
+            body {
+                background: #1f2937;
+                color: white;
+            }
+            .header, .test-section {
+                background: #374151;
+                color: white;
+            }
+            .test-section h2 {
+                color: white;
+            }
+        }
+
+        /* iOS-specific styles */
+        @supports (padding: env(safe-area-inset-top)) {
+            .ios-indicator {
+                display: block;
+                background: #34d399;
+                padding: 5px;
+                text-align: center;
+                border-radius: 4px;
+                margin-top: 10px;
+            }
+        }
+
+        /* Bottom navigation simulation */
+        .bottom-nav {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: white;
+            border-top: 1px solid #e5e7eb;
+            padding: 10px;
+            padding-bottom: calc(10px + env(safe-area-inset-bottom));
+            display: flex;
+            justify-content: space-around;
+            box-shadow: 0 -2px 8px rgba(0,0,0,0.1);
+        }
+
+        .nav-item {
+            padding: 10px 20px;
+            background: #f3f4f6;
+            border-radius: 8px;
+            text-align: center;
+            min-width: 60px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>📱 Claude Code UI Mobile Test</h1>
+            <p>This page tests mobile-specific features and iOS optimizations</p>
+        </div>
+
+        <div class="test-section">
+            <h2>Device Information</h2>
+            <div class="viewport-info" id="deviceInfo">
+                Loading device information...
+            </div>
+            <div class="ios-indicator" style="display:none;">
+                ✅ iOS Safe Area Support Detected
+            </div>
+        </div>
+
+        <div class="test-section">
+            <h2>Touch Target Test</h2>
+            <p>All buttons should be at least 44x44px for iOS compliance</p>
+            <button class="test-button" onclick="testTouch(this)">
+                Tap Me (Touch Optimized)
+            </button>
+            <div id="touchResult"></div>
+        </div>
+
+        <div class="test-section">
+            <h2>Viewport Lock Test</h2>
+            <p>Try to pinch-zoom - it should be disabled</p>
+            <div class="info-box">
+                Viewport is locked to prevent accidental zooming
+            </div>
+        </div>
+
+        <div class="test-section">
+            <h2>Touch Gesture Test</h2>
+            <div class="touch-area" id="touchArea">
+                Touch and drag here
+            </div>
+            <div id="gestureInfo"></div>
+        </div>
+
+        <div class="test-section">
+            <h2>PWA Readiness</h2>
+            <button class="test-button" onclick="checkPWA()">
+                Check PWA Status
+            </button>
+            <div id="pwaStatus"></div>
+        </div>
+
+        <div class="test-section">
+            <h2>Network Test</h2>
+            <button class="test-button" onclick="testConnection()">
+                Test API Connection
+            </button>
+            <div id="networkStatus"></div>
+        </div>
+    </div>
+
+    <div class="bottom-nav">
+        <div class="nav-item">Chat</div>
+        <div class="nav-item">Files</div>
+        <div class="nav-item">Git</div>
+        <div class="nav-item">Shell</div>
+    </div>
+
+    <script>
+        // Device information
+        function updateDeviceInfo() {
+            const info = {
+                'User Agent': navigator.userAgent,
+                'Screen Size': `${screen.width}x${screen.height}`,
+                'Viewport Size': `${window.innerWidth}x${window.innerHeight}`,
+                'Device Pixel Ratio': window.devicePixelRatio,
+                'Standalone Mode': window.navigator.standalone ? 'Yes' : 'No',
+                'Touch Support': 'ontouchstart' in window ? 'Yes' : 'No',
+                'iOS Device': /iPad|iPhone|iPod/.test(navigator.userAgent) ? 'Yes' : 'No'
+            };
+
+            const infoHtml = Object.entries(info)
+                .map(([key, value]) => `<strong>${key}:</strong> ${value}`)
+                .join('<br>');
+            
+            document.getElementById('deviceInfo').innerHTML = infoHtml;
+
+            // Show iOS indicator if applicable
+            if (info['iOS Device'] === 'Yes') {
+                document.querySelector('.ios-indicator').style.display = 'block';
+            }
+        }
+
+        // Touch test
+        function testTouch(button) {
+            button.style.background = '#10b981';
+            button.textContent = '✓ Touch Registered';
+            document.getElementById('touchResult').innerHTML = 
+                '<div class="status success">Touch target working correctly!</div>';
+            
+            setTimeout(() => {
+                button.style.background = '#3b82f6';
+                button.textContent = 'Tap Me (Touch Optimized)';
+            }, 2000);
+        }
+
+        // Touch gesture handling
+        let touchStartX = 0;
+        let touchStartY = 0;
+        const touchArea = document.getElementById('touchArea');
+
+        touchArea.addEventListener('touchstart', (e) => {
+            touchStartX = e.touches[0].clientX;
+            touchStartY = e.touches[0].clientY;
+            touchArea.style.background = '#fde68a';
+        }, { passive: true });
+
+        touchArea.addEventListener('touchmove', (e) => {
+            const touchX = e.touches[0].clientX;
+            const touchY = e.touches[0].clientY;
+            const deltaX = touchX - touchStartX;
+            const deltaY = touchY - touchStartY;
+            
+            document.getElementById('gestureInfo').innerHTML = 
+                `<div class="info-box">Delta X: ${deltaX.toFixed(0)}px, Delta Y: ${deltaY.toFixed(0)}px</div>`;
+        }, { passive: true });
+
+        touchArea.addEventListener('touchend', () => {
+            touchArea.style.background = '#fef3c7';
+            setTimeout(() => {
+                document.getElementById('gestureInfo').innerHTML = 
+                    '<div class="status success">Touch gesture detected!</div>';
+            }, 100);
+        });
+
+        // PWA check
+        function checkPWA() {
+            const status = [];
+            
+            if ('serviceWorker' in navigator) {
+                status.push('✅ Service Worker supported');
+            } else {
+                status.push('❌ Service Worker not supported');
+            }
+
+            if (window.navigator.standalone) {
+                status.push('✅ Running in standalone mode');
+            } else {
+                status.push('ℹ️ Running in browser mode');
+            }
+
+            if (window.matchMedia('(display-mode: standalone)').matches) {
+                status.push('✅ Display mode: standalone');
+            }
+
+            const manifestLink = document.querySelector('link[rel="manifest"]');
+            if (manifestLink) {
+                status.push('✅ Manifest linked');
+            } else {
+                status.push('ℹ️ No manifest found (expected in test page)');
+            }
+
+            document.getElementById('pwaStatus').innerHTML = 
+                `<div class="info-box">${status.join('<br>')}</div>`;
+        }
+
+        // Network test
+        async function testConnection() {
+            const statusDiv = document.getElementById('networkStatus');
+            statusDiv.innerHTML = '<div class="info-box">Testing connection...</div>';
+            
+            try {
+                // Test if we can reach the API endpoint
+                const testUrl = `${window.location.protocol}//${window.location.hostname}:3008/api/config`;
+                const response = await fetch(testUrl, {
+                    method: 'GET',
+                    headers: {
+                        'Accept': 'application/json'
+                    }
+                });
+
+                if (response.ok) {
+                    statusDiv.innerHTML = 
+                        '<div class="status success">✅ API connection successful!</div>';
+                } else {
+                    statusDiv.innerHTML = 
+                        `<div class="status error">❌ API returned status: ${response.status}</div>`;
+                }
+            } catch (error) {
+                statusDiv.innerHTML = 
+                    `<div class="status error">❌ Connection failed: Make sure the server is running on port 3008</div>`;
+            }
+        }
+
+        // Initialize on load
+        window.addEventListener('load', () => {
+            updateDeviceInfo();
+        });
+
+        // Update on resize
+        window.addEventListener('resize', () => {
+            updateDeviceInfo();
+        });
+
+        // Prevent bounce scrolling on iOS
+        document.addEventListener('touchmove', function(e) {
+            if (e.target.closest('.touch-area')) {
+                return; // Allow touch in gesture area
+            }
+            if (e.touches.length > 1) {
+                e.preventDefault(); // Prevent pinch zoom
+            }
+        }, { passive: false });
+    </script>
+</body>
+</html>

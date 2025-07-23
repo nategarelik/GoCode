@@ -1,0 +1,71 @@
+version: '3.8'
+
+services:
+  claudeui:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: claudecodeui
+    ports:
+      - "${PORT:-3008}:3008"
+      - "${VITE_PORT:-3009}:3009"
+    environment:
+      - NODE_ENV=${NODE_ENV:-production}
+      - PORT=${PORT:-3008}
+      - VITE_PORT=${VITE_PORT:-3009}
+      - VITE_HOST=0.0.0.0
+    volumes:
+      # Data persistence
+      - ./data:/app/data
+      - ./logs:/app/logs
+      # Claude projects directory (read-only)
+      - ~/.claude:/home/nodejs/.claude:ro
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:3008/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    networks:
+      - claudeui-network
+
+  # Optional: Nginx reverse proxy
+  nginx:
+    image: nginx:alpine
+    container_name: claudeui-nginx
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./nginx/ssl:/etc/nginx/ssl:ro
+      - ./nginx/conf.d:/etc/nginx/conf.d:ro
+    depends_on:
+      - claudeui
+    restart: unless-stopped
+    networks:
+      - claudeui-network
+    profiles:
+      - with-nginx
+
+  # Optional: Redis for session storage
+  redis:
+    image: redis:7-alpine
+    container_name: claudeui-redis
+    command: redis-server --appendonly yes --requirepass ${REDIS_PASSWORD:-changeme}
+    volumes:
+      - redis-data:/data
+    restart: unless-stopped
+    networks:
+      - claudeui-network
+    profiles:
+      - with-redis
+
+networks:
+  claudeui-network:
+    driver: bridge
+
+volumes:
+  redis-data:
+    driver: local

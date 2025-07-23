@@ -1,0 +1,389 @@
+# Security Policy Configuration for ClaudeCodeUI
+# Defines security standards, compliance requirements, and enforcement rules
+
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: security-policy
+  namespace: claudecodeui
+  labels:
+    app.kubernetes.io/name: claudecodeui
+    app.kubernetes.io/component: security-policy
+data:
+  security-policy.yaml: |
+    # ClaudeCodeUI Security Policy
+    version: "1.0"
+    last_updated: "2024-01-15"
+    
+    # Security Standards
+    standards:
+      encryption:
+        at_rest: "AES-256"
+        in_transit: "TLS 1.2+"
+        key_management: "AWS KMS"
+      
+      authentication:
+        method: "JWT + Session"
+        password_policy:
+          min_length: 12
+          complexity: true
+          rotation_days: 90
+        mfa_required: true
+        session_timeout: 86400  # 24 hours
+      
+      authorization:
+        rbac_enabled: true
+        principle: "least_privilege"
+        review_interval: 90  # days
+      
+      network:
+        ingress_whitelist: true
+        egress_restrictions: true
+        tls_termination: "load_balancer"
+        cors_policy: "strict"
+      
+      container:
+        base_images: "distroless"
+        non_root_user: true
+        read_only_filesystem: true
+        no_privileged_containers: true
+        security_context_required: true
+        resource_limits_required: true
+      
+      data:
+        classification_required: true
+        pii_encryption: true
+        data_retention_policy: true
+        backup_encryption: true
+    
+    # Compliance Requirements
+    compliance:
+      frameworks:
+        - name: "CIS Kubernetes Benchmark"
+          version: "1.7.0"
+          mandatory: true
+        - name: "OWASP Top 10"
+          version: "2021"
+          mandatory: true
+        - name: "NIST Cybersecurity Framework"
+          version: "1.1"
+          mandatory: false
+        - name: "SOC 2 Type II"
+          version: "2017"
+          mandatory: true
+      
+      requirements:
+        vulnerability_scanning: "daily"
+        penetration_testing: "quarterly"
+        security_training: "annually"
+        incident_response_plan: true
+        disaster_recovery_plan: true
+        security_documentation: true
+    
+    # Security Controls
+    controls:
+      preventive:
+        - id: "PREV-001"
+          name: "Input Validation"
+          description: "All user inputs must be validated and sanitized"
+          severity: "HIGH"
+          implementation: "required"
+        
+        - id: "PREV-002"
+          name: "Authentication Required"
+          description: "All API endpoints require authentication"
+          severity: "CRITICAL"
+          implementation: "required"
+        
+        - id: "PREV-003"
+          name: "HTTPS Enforcement"
+          description: "All communications must use HTTPS"
+          severity: "HIGH"
+          implementation: "required"
+        
+        - id: "PREV-004"
+          name: "Security Headers"
+          description: "Implement security headers (HSTS, CSP, etc.)"
+          severity: "MEDIUM"
+          implementation: "required"
+        
+        - id: "PREV-005"
+          name: "Rate Limiting"
+          description: "Implement rate limiting on all endpoints"
+          severity: "MEDIUM"
+          implementation: "required"
+      
+      detective:
+        - id: "DET-001"
+          name: "Security Monitoring"
+          description: "Monitor for security events and anomalies"
+          severity: "HIGH"
+          implementation: "required"
+        
+        - id: "DET-002"
+          name: "Audit Logging"
+          description: "Log all security-relevant events"
+          severity: "HIGH"
+          implementation: "required"
+        
+        - id: "DET-003"
+          name: "Vulnerability Scanning"
+          description: "Regular vulnerability assessments"
+          severity: "HIGH"
+          implementation: "required"
+        
+        - id: "DET-004"
+          name: "Intrusion Detection"
+          description: "Detect and alert on intrusion attempts"
+          severity: "MEDIUM"
+          implementation: "recommended"
+      
+      corrective:
+        - id: "CORR-001"
+          name: "Incident Response"
+          description: "Documented incident response procedures"
+          severity: "HIGH"
+          implementation: "required"
+        
+        - id: "CORR-002"
+          name: "Automated Remediation"
+          description: "Automatic response to known threats"
+          severity: "MEDIUM"
+          implementation: "recommended"
+        
+        - id: "CORR-003"
+          name: "Backup and Recovery"
+          description: "Secure backup and recovery procedures"
+          severity: "HIGH"
+          implementation: "required"
+    
+    # Vulnerability Management
+    vulnerability_management:
+      scanning_frequency: "daily"
+      severity_levels:
+        critical:
+          sla: "immediate"  # 0 hours
+          escalation: "ciso"
+        high:
+          sla: "24_hours"
+          escalation: "security_team"
+        medium:
+          sla: "7_days"
+          escalation: "development_team"
+        low:
+          sla: "30_days"
+          escalation: "development_team"
+      
+      remediation_process:
+        - assess_impact
+        - create_remediation_plan
+        - test_fix
+        - deploy_fix
+        - verify_resolution
+        - document_resolution
+    
+    # Security Testing
+    security_testing:
+      static_analysis:
+        frequency: "every_commit"
+        tools: ["eslint-security", "semgrep", "trivy"]
+        fail_build_on: ["critical", "high"]
+      
+      dynamic_analysis:
+        frequency: "nightly"
+        tools: ["zap", "nuclei"]
+        environments: ["staging"]
+      
+      dependency_scanning:
+        frequency: "every_commit"
+        tools: ["npm-audit", "trivy"]
+        auto_update: "patch_minor"
+      
+      container_scanning:
+        frequency: "every_build"
+        tools: ["trivy", "clair"]
+        base_image_updates: "weekly"
+      
+      infrastructure_scanning:
+        frequency: "daily"
+        tools: ["checkov", "terrascan"]
+        scope: ["terraform", "kubernetes"]
+    
+    # Incident Response
+    incident_response:
+      severity_levels:
+        critical:
+          response_time: "15_minutes"
+          notification: ["ciso", "security_team", "on_call"]
+        high:
+          response_time: "1_hour"
+          notification: ["security_team", "on_call"]
+        medium:
+          response_time: "4_hours"
+          notification: ["security_team"]
+        low:
+          response_time: "24_hours"
+          notification: ["security_team"]
+      
+      response_team:
+        - role: "incident_commander"
+          contact: "security-team@company.com"
+        - role: "technical_lead"
+          contact: "devops-team@company.com"
+        - role: "communications"
+          contact: "comms-team@company.com"
+      
+      escalation_matrix:
+        - level: 1
+          team: "security_team"
+          timeframe: "immediate"
+        - level: 2
+          team: "management"
+          timeframe: "1_hour"
+        - level: 3
+          team: "executive"
+          timeframe: "4_hours"
+    
+    # Security Metrics
+    metrics:
+      kpis:
+        - name: "Mean Time to Detection (MTTD)"
+          target: "< 1 hour"
+        - name: "Mean Time to Response (MTTR)"
+          target: "< 4 hours"
+        - name: "Vulnerability Fix Rate"
+          target: "> 95%"
+        - name: "Security Training Completion"
+          target: "100%"
+        - name: "Patch Compliance"
+          target: "> 98%"
+      
+      reporting:
+        frequency: "monthly"
+        recipients: ["ciso", "security_team", "management"]
+        dashboards: ["grafana", "splunk"]
+    
+    # Training and Awareness
+    security_training:
+      mandatory_training:
+        - name: "Security Awareness"
+          frequency: "annually"
+          audience: "all_employees"
+        - name: "Secure Coding"
+          frequency: "annually"
+          audience: "developers"
+        - name: "Incident Response"
+          frequency: "bi_annually"
+          audience: "security_team"
+      
+      phishing_simulation:
+        frequency: "quarterly"
+        failure_threshold: "20%"
+        remedial_training: "required"
+    
+    # Third Party Risk
+    third_party_risk:
+      vendor_assessment:
+        frequency: "annually"
+        requirements: ["soc2", "iso27001"]
+        security_questionnaire: "required"
+      
+      supply_chain:
+        dependency_scanning: "continuous"
+        license_compliance: "required"
+        vulnerability_monitoring: "continuous"
+
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: owasp-zap-config
+  namespace: claudecodeui
+  labels:
+    app.kubernetes.io/name: claudecodeui
+    app.kubernetes.io/component: security-testing
+data:
+  zap-baseline.conf: |
+    # OWASP ZAP Baseline Configuration
+    
+    # Exclude false positives
+    -config rules.cookie.ignorelist="JSESSIONID,csrftoken"
+    -config rules.csrf.ignorelist="/api/health"
+    
+    # Configure authentication
+    -config authentication.method="form"
+    -config authentication.loginurl="/api/auth/login"
+    -config authentication.username="test@example.com"
+    -config authentication.password="testpassword"
+    
+    # Configure scanning rules
+    -config rules.10021.enabled=true  # X-Content-Type-Options
+    -config rules.10020.enabled=true  # X-Frame-Options
+    -config rules.10016.enabled=true  # Web Browser XSS Protection
+    -config rules.10035.enabled=true  # Strict-Transport-Security
+    -config rules.10038.enabled=true  # Content Security Policy
+    
+    # Custom rules for ClaudeCodeUI
+    -config rules.custom.api_security=true
+    -config rules.custom.websocket_security=true
+    -config rules.custom.file_upload_security=true
+
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: claudecodeui-network-policy
+  namespace: claudecodeui
+  labels:
+    app.kubernetes.io/name: claudecodeui
+    app.kubernetes.io/component: security-policy
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/name: claudecodeui
+  policyTypes:
+  - Ingress
+  - Egress
+  ingress:
+  - from:
+    - namespaceSelector:
+        matchLabels:
+          name: ingress-nginx
+    - podSelector:
+        matchLabels:
+          app.kubernetes.io/name: nginx
+    ports:
+    - protocol: TCP
+      port: 3008
+    - protocol: TCP
+      port: 3009
+  - from:
+    - namespaceSelector:
+        matchLabels:
+          name: monitoring
+    - podSelector:
+        matchLabels:
+          app.kubernetes.io/name: prometheus
+    ports:
+    - protocol: TCP
+      port: 9090
+  egress:
+  - to: []
+    ports:
+    - protocol: TCP
+      port: 53
+    - protocol: UDP
+      port: 53
+  - to:
+    - podSelector:
+        matchLabels:
+          app.kubernetes.io/name: mysql
+    ports:
+    - protocol: TCP
+      port: 3306
+  - to: []
+    ports:
+    - protocol: TCP
+      port: 443
+    - protocol: TCP
+      port: 80

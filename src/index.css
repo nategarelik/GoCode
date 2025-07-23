@@ -23,6 +23,7 @@
 
 @layer base {
   :root {
+    /* Core theme colors */
     --background: 0 0% 100%;
     --foreground: 222.2 84% 4.9%;
     --card: 0 0% 100%;
@@ -43,9 +44,43 @@
     --input: 214.3 31.8% 91.4%;
     --ring: 221.2 83.2% 53.3%;
     --radius: 0.5rem;
+
+    /* Enhanced semantic colors for better dark mode */
+    --surface: 0 0% 98%;
+    --surface-elevated: 0 0% 100%;
+    --surface-overlay: 0 0% 100%;
+    --surface-hover: 210 40% 94%;
+    --surface-active: 210 40% 90%;
+    
+    /* Status colors */
+    --success: 142 76% 36%;
+    --success-foreground: 355 100% 100%;
+    --warning: 38 92% 50%;
+    --warning-foreground: 222.2 84% 4.9%;
+    --info: 221.2 83.2% 53.3%;
+    --info-foreground: 210 40% 98%;
+    
+    /* Interactive states */
+    --hover: 210 40% 94%;
+    --active: 210 40% 90%;
+    --focus: 221.2 83.2% 53.3%;
+    --disabled: 210 40% 96.1%;
+    --disabled-foreground: 215.4 16.3% 46.9%;
+    
+    /* Loading and progress */
+    --loading: 221.2 83.2% 53.3%;
+    --loading-secondary: 210 40% 96.1%;
+    
+    /* Shadows and overlays */
+    --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+    --shadow: 0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1);
+    --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+    --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
+    --overlay: 0 0 0 / 0.5;
   }
 
   .dark {
+    /* Core theme colors */
     --background: 222.2 84% 4.9%;
     --foreground: 210 40% 98%;
     --card: 217.2 91.2% 8%;
@@ -65,6 +100,48 @@
     --border: 217.2 32.6% 17.5%;
     --input: 217.2 32.6% 17.5%;
     --ring: 217.2 91.2% 59.8%;
+
+    /* Enhanced semantic colors for dark mode */
+    --surface: 222.2 84% 6%;
+    --surface-elevated: 217.2 91.2% 8%;
+    --surface-overlay: 217.2 91.2% 10%;
+    --surface-hover: 217.2 32.6% 20%;
+    --surface-active: 217.2 32.6% 25%;
+    
+    /* Status colors - adjusted for dark mode */
+    --success: 142 70% 45%;
+    --success-foreground: 210 40% 98%;
+    --warning: 38 92% 60%;
+    --warning-foreground: 222.2 84% 4.9%;
+    --info: 217.2 91.2% 65%;
+    --info-foreground: 222.2 47.4% 11.2%;
+    
+    /* Interactive states */
+    --hover: 217.2 32.6% 20%;
+    --active: 217.2 32.6% 25%;
+    --focus: 217.2 91.2% 59.8%;
+    --disabled: 217.2 32.6% 15%;
+    --disabled-foreground: 215 20.2% 45%;
+    
+    /* Loading and progress */
+    --loading: 217.2 91.2% 65%;
+    --loading-secondary: 217.2 32.6% 20%;
+    
+    /* Shadows and overlays - enhanced for dark mode */
+    --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.3);
+    --shadow: 0 1px 3px 0 rgb(0 0 0 / 0.4), 0 1px 2px -1px rgb(0 0 0 / 0.4);
+    --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.4), 0 2px 4px -2px rgb(0 0 0 / 0.4);
+    --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.5), 0 4px 6px -4px rgb(0 0 0 / 0.5);
+    --overlay: 0 0 0 / 0.7;
+  }
+
+  /* Smooth theme transitions */
+  html {
+    --transition-colors: background-color 300ms cubic-bezier(0.4, 0, 0.2, 1),
+                        border-color 300ms cubic-bezier(0.4, 0, 0.2, 1),
+                        color 300ms cubic-bezier(0.4, 0, 0.2, 1),
+                        fill 300ms cubic-bezier(0.4, 0, 0.2, 1),
+                        stroke 300ms cubic-bezier(0.4, 0, 0.2, 1);
   }
 }
 
@@ -130,6 +207,45 @@
     transition: box-shadow 200ms ease-in-out;
   }
   
+  /* Skip navigation accessibility styles */
+  .skip-navigation a {
+    /* Ensure skip links are always accessible */
+    position: absolute !important;
+    z-index: 9999 !important;
+  }
+
+  .skip-navigation a:focus {
+    /* High contrast and visibility when focused */
+    background-color: hsl(var(--primary)) !important;
+    color: hsl(var(--primary-foreground)) !important;
+    text-decoration: none !important;
+    box-shadow: 0 0 0 2px hsl(var(--ring)) !important;
+  }
+
+  /* Skip target focus styles */
+  .skip-target:focus-visible {
+    outline: 2px solid hsl(var(--ring)) !important;
+    outline-offset: 2px !important;
+  }
+
+  /* High contrast mode support */
+  @media (prefers-contrast: high) {
+    .skip-navigation a:focus {
+      border: 3px solid currentColor !important;
+      font-weight: bold !important;
+    }
+  }
+
+  /* Focus management utilities */
+  .focus-trap {
+    /* Container for focus trapping */
+    position: relative;
+  }
+
+  .focus-trap:focus {
+    outline: none;
+  }
+
   /* Respect reduced motion preference */
   @media (prefers-reduced-motion: reduce) {
     *,
@@ -139,6 +255,12 @@
       animation-iteration-count: 1 !important;
       transition-duration: 0.01ms !important;
       scroll-behavior: auto !important;
+    }
+    
+    /* Still allow focus transitions for accessibility */
+    .skip-navigation a,
+    .skip-target {
+      transition: outline 0.1s ease !important;
     }
   }
 }
@@ -637,7 +759,7 @@
     animation: spin 1s linear infinite;
   }
   
-  /* Force hardware acceleration for smoother animation on mobile */
+  /* Loading spinner animations with hardware acceleration */
   .loading-spinner {
     animation: spin 1s linear infinite;
     will-change: transform;
@@ -645,6 +767,34 @@
     -webkit-transform: translateZ(0);
     backface-visibility: hidden;
     -webkit-backface-visibility: hidden;
+  }
+  
+  /* Loading animation speed variants */
+  .animate-spin-slow {
+    animation: spin 2s linear infinite;
+  }
+  
+  .animate-spin-fast {
+    animation: spin 0.5s linear infinite;
+  }
+  
+  /* Respect reduced motion preference for loading animations */
+  @media (prefers-reduced-motion: reduce) {
+    .loading-spinner,
+    .animate-spin,
+    .animate-spin-slow,
+    .animate-spin-fast {
+      animation: none !important;
+    }
+    
+    .animate-pulse {
+      animation: none !important;
+      opacity: 0.5 !important;
+    }
+    
+    .animate-bounce {
+      animation: none !important;
+    }
   }
   
   /* Improved textarea styling */

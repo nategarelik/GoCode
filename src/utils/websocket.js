@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 
-export function useWebSocket() {
+export function useWebSocket(onMessage) {
   const [ws, setWs] = useState(null);
   const [messages, setMessages] = useState([]);
   const [isConnected, setIsConnected] = useState(false);
@@ -68,6 +68,11 @@ export function useWebSocket() {
         try {
           const data = JSON.parse(event.data);
           setMessages(prev => [...prev, data]);
+          
+          // Call custom message handler if provided
+          if (onMessage) {
+            onMessage(data);
+          }
         } catch (error) {
           console.error('Error parsing WebSocket message:', error);
         }

@@ -1,0 +1,369 @@
+# GitLab CI/CD Pipeline for ClaudeCodeUI
+# Comprehensive pipeline with security, testing, and deployment
+
+image: node:20-alpine
+
+variables:
+  DOCKER_DRIVER: overlay2
+  DOCKER_TLS_CERTDIR: "/certs"
+  REGISTRY: $CI_REGISTRY
+  IMAGE_NAME: $CI_REGISTRY_IMAGE
+  KUBECONFIG: /tmp/kubeconfig
+
+stages:
+  - security
+  - quality
+  - test
+  - build
+  - security-scan
+  - deploy-staging
+  - deploy-production
+  - cleanup
+
+# Security scanning
+security-scan:
+  stage: security
+  image: aquasec/trivy:latest
+  script:
+    - trivy fs --exit-code 0 --severity HIGH,CRITICAL --format template --template "@contrib/sarif.tpl" -o trivy-results.sarif .
+    - trivy fs --exit-code 1 --severity CRITICAL --quiet .
+  artifacts:
+    reports:
+      sast: trivy-results.sarif
+    paths:
+      - trivy-results.sarif
+    expire_in: 1 week
+  allow_failure: false
+
+# SAST scanning
+sast:
+  stage: security
+  script:
+    - echo "SAST scanning"
+  artifacts:
+    reports:
+      sast: gl-sast-report.json
+
+# Secret detection
+secret_detection:
+  stage: security
+  script:
+    - echo "Secret detection"
+  artifacts:
+    reports:
+      secret_detection: gl-secret-detection-report.json
+
+# Dependency scanning
+dependency_scanning:
+  stage: security
+  script:
+    - echo "Dependency scanning"
+  artifacts:
+    reports:
+      dependency_scanning: gl-dependency-scanning-report.json
+
+# Code quality and linting
+lint:
+  stage: quality
+  cache:
+    paths:
+      - node_modules/
+  before_script:
+    - npm ci
+  script:
+    - npm run lint --if-present
+    - npm run format:check --if-present
+    - npm run bundle-size --if-present
+  artifacts:
+    reports:
+      codequality: gl-code-quality-report.json
+    paths:
+      - gl-code-quality-report.json
+    expire_in: 1 week
+
+# Unit tests
+test:unit:
+  stage: test
+  cache:
+    paths:
+      - node_modules/
+  before_script:
+    - npm ci
+  script:
+    - npm run test:coverage
+  coverage: '/Lines\s*:\s*(\d+\.\d+)%/'
+  artifacts:
+    reports:
+      junit: junit.xml
+      coverage_report:
+        coverage_format: cobertura
+        path: coverage/cobertura-coverage.xml
+    paths:
+      - coverage/
+    expire_in: 1 week
+
+# Accessibility tests
+test:accessibility:
+  stage: test
+  cache:
+    paths:
+      - node_modules/
+  before_script:
+    - npm ci
+  script:
+    - npm run test:accessibility
+  artifacts:
+    reports:
+      accessibility: gl-accessibility-report.json
+    paths:
+      - gl-accessibility-report.json
+    expire_in: 1 week
+
+# Performance tests
+test:performance:
+  stage: test
+  cache:
+    paths:
+      - node_modules/
+  before_script:
+    - npm ci
+    - npm run build
+  script:
+    - npm start &
+    - sleep 30
+    - npm run test:performance
+  artifacts:
+    reports:
+      performance: performance.json
+    paths:
+      - performance.json
+    expire_in: 1 week
+
+# End-to-end tests
+test:e2e:
+  stage: test
+  image: mcr.microsoft.com/playwright:v1.40.0-focal
+  cache:
+    paths:
+      - node_modules/
+  before_script:
+    - npm ci
+    - npm run build
+  script:
+    - npm start &
+    - sleep 30
+    - npm run test:e2e
+  artifacts:
+    when: on_failure
+    paths:
+      - playwright-report/
+      - test-results/
+    expire_in: 1 week
+
+# Build Docker image
+build:
+  stage: build
+  image: docker:24-dind
+  services:
+    - docker:24-dind
+  variables:
+    DOCKER_BUILDKIT: 1
+  before_script:
+    - echo $CI_REGISTRY_PASSWORD | docker login -u $CI_REGISTRY_USER --password-stdin $CI_REGISTRY
+  script:
+    - |
+      # Build multi-platform image
+      docker buildx create --use --name mybuilder || true
+      docker buildx build \
+        --platform linux/amd64,linux/arm64 \
+        --tag $IMAGE_NAME:$CI_COMMIT_SHA \
+        --tag $IMAGE_NAME:$CI_COMMIT_REF_SLUG \
+        --push \
+        .
+    - |
+      # Tag latest for main branch
+      if [ "$CI_COMMIT_REF_SLUG" = "main" ]; then
+        docker buildx build \
+          --platform linux/amd64,linux/arm64 \
+          --tag $IMAGE_NAME:latest \
+          --push \
+          .
+      fi
+  only:
+    - main
+    - develop
+    - tags
+
+# Container security scan
+container-scan:
+  stage: security-scan
+  image: aquasec/trivy:latest
+  script:
+    - trivy image --exit-code 0 --severity HIGH,CRITICAL --format template --template "@contrib/sarif.tpl" -o container-scanning.sarif $IMAGE_NAME:$CI_COMMIT_SHA
+    - trivy image --exit-code 1 --severity CRITICAL --quiet $IMAGE_NAME:$CI_COMMIT_SHA
+  artifacts:
+    reports:
+      container_scanning: container-scanning.sarif
+    paths:
+      - container-scanning.sarif
+    expire_in: 1 week
+  dependencies:
+    - build
+  only:
+    - main
+    - develop
+    - tags
+
+# Deploy to staging
+deploy:staging:
+  stage: deploy-staging
+  image: bitnami/kubectl:latest
+  environment:
+    name: staging
+    url: https://staging.claudecodeui.com
+  before_script:
+    - echo "$KUBECONFIG_STAGING" | base64 -d > $KUBECONFIG
+    - chmod 600 $KUBECONFIG
+  script:
+    - |
+      # Deploy using blue-green strategy
+      ./scripts/deploy.sh \
+        --environment staging \
+        --strategy blue-green \
+        --registry $REGISTRY \
+        --tag $CI_COMMIT_SHA \
+        --force
+    - |
+      # Wait for deployment and run smoke tests
+      kubectl wait --for=condition=available deployment/claudecodeui-blue -n claudecodeui-staging --timeout=300s
+      curl -f https://staging.claudecodeui.com/health || exit 1
+  dependencies:
+    - build
+    - container-scan
+  only:
+    - develop
+  when: on_success
+
+# Deploy to production
+deploy:production:
+  stage: deploy-production
+  image: bitnami/kubectl:latest
+  environment:
+    name: production
+    url: https://claudecodeui.com
+  before_script:
+    - echo "$KUBECONFIG_PRODUCTION" | base64 -d > $KUBECONFIG
+    - chmod 600 $KUBECONFIG
+  script:
+    - |
+      # Create backup before deployment
+      kubectl create job backup-pre-deploy-$(date +%s) \
+        --from=cronjob/database-backup \
+        -n claudecodeui-production || true
+    - |
+      # Deploy using blue-green strategy
+      ./scripts/deploy.sh \
+        --environment production \
+        --strategy blue-green \
+        --registry $REGISTRY \
+        --tag $CI_COMMIT_TAG \
+        --force
+    - |
+      # Wait for deployment and run comprehensive tests
+      kubectl wait --for=condition=available deployment/claudecodeui-blue -n claudecodeui-production --timeout=600s
+      curl -f https://claudecodeui.com/health || exit 1
+      curl -f https://claudecodeui.com/api/health/database || exit 1
+      curl -f https://claudecodeui.com/api/health/redis || exit 1
+  dependencies:
+    - build
+    - container-scan
+  only:
+    - tags
+  when: manual
+  allow_failure: false
+
+# Rollback job (manual trigger)
+rollback:staging:
+  stage: deploy-staging
+  image: bitnami/kubectl:latest
+  environment:
+    name: staging
+    url: https://staging.claudecodeui.com
+  before_script:
+    - echo "$KUBECONFIG_STAGING" | base64 -d > $KUBECONFIG
+    - chmod 600 $KUBECONFIG
+  script:
+    - ./scripts/blue-green-deploy.sh --rollback --namespace claudecodeui-staging
+  when: manual
+  allow_failure: false
+
+rollback:production:
+  stage: deploy-production
+  image: bitnami/kubectl:latest
+  environment:
+    name: production
+    url: https://claudecodeui.com
+  before_script:
+    - echo "$KUBECONFIG_PRODUCTION" | base64 -d > $KUBECONFIG
+    - chmod 600 $KUBECONFIG
+  script:
+    - ./scripts/blue-green-deploy.sh --rollback --namespace claudecodeui-production
+  when: manual
+  allow_failure: false
+
+# Cleanup old images
+cleanup:
+  stage: cleanup
+  image: docker:24-dind
+  services:
+    - docker:24-dind
+  before_script:
+    - echo $CI_REGISTRY_PASSWORD | docker login -u $CI_REGISTRY_USER --password-stdin $CI_REGISTRY
+  script:
+    - |
+      # Keep only last 10 images for each branch
+      docker run --rm \
+        -e REGISTRY_URL=$CI_REGISTRY \
+        -e REGISTRY_USERNAME=$CI_REGISTRY_USER \
+        -e REGISTRY_PASSWORD=$CI_REGISTRY_PASSWORD \
+        -e REPOSITORY=$CI_PROJECT_PATH \
+        -e KEEP_LAST=10 \
+        gitlab/container-registry-cleanup:latest
+  only:
+    - schedules
+  allow_failure: true
+
+# Include GitLab security templates
+include:
+  - template: Security/SAST.gitlab-ci.yml
+  - template: Security/Secret-Detection.gitlab-ci.yml
+  - template: Security/Dependency-Scanning.gitlab-ci.yml
+  - template: Security/Container-Scanning.gitlab-ci.yml
+  - template: Security/DAST.gitlab-ci.yml
+
+# DAST (Dynamic Application Security Testing)
+dast:
+  stage: security-scan
+  variables:
+    DAST_WEBSITE: https://staging.claudecodeui.com
+    DAST_FULL_SCAN_ENABLED: "true"
+  dependencies:
+    - deploy:staging
+  only:
+    - develop
+
+# Cache configuration
+cache:
+  key: ${CI_COMMIT_REF_SLUG}
+  paths:
+    - node_modules/
+    - .npm/
+
+# Workflow rules
+workflow:
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+    - if: $CI_COMMIT_BRANCH && $CI_OPEN_MERGE_REQUESTS
+      when: never
+    - if: $CI_COMMIT_BRANCH
+    - if: $CI_COMMIT_TAG

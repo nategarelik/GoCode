@@ -1,0 +1,10 @@
+[Desktop Entry]
+Version=1.0
+Type=Application
+Name=OpenClaudeUI
+Comment=AI-powered development interface with Claude-Flow integration
+Exec=gnome-terminal -- bash -c "cd /home/ngarelik/claudecodeui && ./start-ui.sh; exec bash"
+Icon=/home/ngarelik/claudecodeui/public/claude-icon.png
+Terminal=true
+Categories=Development;IDE;
+Keywords=claude;ai;development;flow;orchestration;

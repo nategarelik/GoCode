@@ -2,14 +2,17 @@ import { spawn } from 'child_process';
 import { promises as fs } from 'fs';
 import path from 'path';
 import os from 'os';
+import { recordUsage } from './database/analyticsDb.js';
 
 let activeClaudeProcesses = new Map(); // Track active processes by session ID
 
 async function spawnClaude(command, options = {}, ws) {
   return new Promise(async (resolve, reject) => {
-    const { sessionId, projectPath, cwd, resume, toolsSettings, permissionMode, images } = options;
+    const { sessionId, projectPath, cwd, resume, toolsSettings, permissionMode, images, userId } = options;
     let capturedSessionId = sessionId; // Track session ID throughout the process
     let sessionCreatedSent = false; // Track if we've already sent session-created event
+    let apiStartTime = Date.now(); // Track start time for performance metrics
+    let accumulatedTokens = { input: 0, output: 0 }; // Track token usage
     
     // Use tools settings passed from frontend, or defaults
     const settings = toolsSettings || {
@@ -274,6 +277,21 @@ async function spawnClaude(command, options = {}, ws) {
             }
           }
           
+          // Track token usage if present in response
+          if (response.usage) {
+            if (response.usage.input_tokens) {
+              accumulatedTokens.input += response.usage.input_tokens;
+            }
+            if (response.usage.output_tokens) {
+              accumulatedTokens.output += response.usage.output_tokens;
+            }
+          }
+          
+          // Track model information if present
+          if (response.model) {
+            claudeProcess.model = response.model;
+          }
+          
           // Send parsed response to WebSocket
           ws.send(JSON.stringify({
             type: 'claude-response',
@@ -302,6 +320,31 @@ async function spawnClaude(command, options = {}, ws) {
     // Handle process completion
     claudeProcess.on('close', async (code) => {
       console.log(`Claude CLI process exited with code ${code}`);
+      
+      // Record analytics data if we have token usage
+      if (accumulatedTokens.input > 0 || accumulatedTokens.output > 0) {
+        try {
+          const responseTime = Date.now() - apiStartTime;
+          await recordUsage({
+            projectId: projectPath || cwd || 'unknown',
+            model: claudeProcess.model || 'claude-3-5-sonnet-20241022',
+            inputTokens: accumulatedTokens.input,
+            outputTokens: accumulatedTokens.output,
+            responseTime,
+            status: code === 0 ? 'success' : 'error',
+            errorMessage: code !== 0 ? `Process exited with code ${code}` : null,
+            userId: userId || null,
+            sessionId: capturedSessionId || sessionId || null
+          });
+          console.log('📊 Analytics recorded:', {
+            tokens: accumulatedTokens,
+            responseTime,
+            model: claudeProcess.model
+          });
+        } catch (analyticsError) {
+          console.error('Error recording analytics:', analyticsError);
+        }
+      }
       
       // Clean up process reference
       const finalSessionId = capturedSessionId || sessionId || processKey;
