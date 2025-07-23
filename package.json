@@ -22,7 +22,9 @@
     "test:ci": "vitest --run --coverage && playwright test --reporter=github",
     "test:setup": "node scripts/test-setup.js",
     "pretest": "npm run test:setup",
-    "pretest:e2e": "npm run test:setup"
+    "pretest:e2e": "npm run test:setup",
+    "lint": "eslint src --ext .js,.jsx",
+    "lint:fix": "eslint src --ext .js,.jsx --fix"
   },
   "keywords": [
     "claude",
