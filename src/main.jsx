@@ -1,7 +1,10 @@
 import React from 'react'
 import ReactDOM from 'react-dom/client'
 import App from './App.jsx'
-import './index.css'
+// UnoCSS virtual import
+import 'virtual:uno.css'
+// Custom CSS for theme variables
+import './index-uno.css'
 import { markPerformance } from './utils/performance'
 
 // Mark app initialization start

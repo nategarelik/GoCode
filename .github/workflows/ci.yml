@@ -6,6 +6,10 @@ on:
   pull_request:
     branches: [main]
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
 env:
   NODE_VERSION: '20'
 
@@ -26,10 +30,20 @@ jobs:
         run: npm install
       
       - name: Run ESLint
-        run: npm run lint --if-present || echo "No lint script found"
+        run: |
+          if [ -f "package.json" ] && grep -q "\"lint\":" package.json; then
+            npm run lint
+          else
+            echo "Warning: No lint script found in package.json"
+            exit 1
+          fi
       
       - name: Check formatting
-        run: npx prettier --check "src/**/*.{js,jsx,ts,tsx,css}" || echo "Code formatting check"
+        run: |
+          npx prettier --check "src/**/*.{js,jsx,ts,tsx,css}" || {
+            echo "Error: Code formatting issues found. Run 'npx prettier --write src/**/*.{js,jsx,ts,tsx,css}' to fix."
+            exit 1
+          }
 
   test:
     name: Test
@@ -47,7 +61,13 @@ jobs:
         run: npm install
       
       - name: Run tests
-        run: npm test --if-present || echo "No test script found"
+        run: |
+          if [ -f "package.json" ] && grep -q "\"test\":" package.json; then
+            npm test
+          else
+            echo "Warning: No test script found in package.json"
+            exit 1
+          fi
 
   build:
     name: Build

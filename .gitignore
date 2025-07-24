@@ -126,6 +126,17 @@ server/database/*.db-wal
 # Local configuration
 .env.*
 !.env.example
+!.env.production.example
+
+# SSL certificates
+nginx/ssl/*.pem
+nginx/ssl/*.key
+nginx/ssl/*.crt
+
+# Backup files
+backups/
+*.backup
+*.bak
 
 # Test coverage
 coverage/

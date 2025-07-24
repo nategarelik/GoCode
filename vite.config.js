@@ -1,5 +1,6 @@
 import { defineConfig, loadEnv } from 'vite'
 import react from '@vitejs/plugin-react'
+import UnoCSS from 'unocss/vite'
 import { resolve } from 'path'
 
 export default defineConfig(({ command, mode }) => {
@@ -14,6 +15,10 @@ export default defineConfig(({ command, mode }) => {
   return {
     base,
     plugins: [
+      UnoCSS({
+        // Enable inspector in development
+        inspector: isDev,
+      }),
       react({
         // Enable Fast Refresh for better development experience
         fastRefresh: isDev,

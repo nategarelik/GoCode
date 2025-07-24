@@ -47,6 +47,10 @@ import { initializeDatabase } from './database/db.js';
 import { validateApiKey, authenticateToken, authenticateWebSocket } from './middleware/auth.js';
 import { trackUsage, trackPerformance } from './middleware/analytics.js';
 import alertService from './services/alertService.js';
+import { securityConfig, validateSecurityConfig } from './config/security.js';
+import { errorHandler, notFoundHandler, requestLogger, asyncHandler } from './middleware/errorHandler.js';
+import { generalRateLimiter, authRateLimiter } from './middleware/rateLimiter.js';
+import { performanceMonitor, connectionTracker, systemMetrics, setupGracefulShutdown } from './middleware/monitoring.js';
 
 // File system watcher for projects folder
 let projectsWatcher = null;
@@ -169,6 +173,16 @@ app.use(express.json());
 
 // Optional API key validation (if configured)
 app.use('/api', validateApiKey);
+
+// Health check endpoint (public)
+app.get('/api/health', (req, res) => {
+  res.status(200).json({ 
+    status: 'ok',
+    timestamp: new Date().toISOString(),
+    uptime: process.uptime(),
+    version: process.env.npm_package_version || '1.5.0'
+  });
+});
 
 // Authentication routes (public)
 app.use('/api/auth', authRoutes);
@@ -1004,12 +1018,23 @@ const PORT = process.env.PORT || 3000;
 // Initialize database and start server
 async function startServer() {
   try {
+    // Validate security configuration
+    if (process.env.NODE_ENV === 'production') {
+      validateSecurityConfig();
+    }
+    
     // Initialize authentication database
     await initializeDatabase();
     console.log('✅ Database initialization skipped (testing)');
     
     server.listen(PORT, '0.0.0.0', async () => {
       console.log(`Claude Code UI server running on http://0.0.0.0:${PORT}`);
+      console.log(`🛡️  Environment: ${process.env.NODE_ENV || 'development'}`);
+      console.log(`🔒 Security: JWT configured, CORS enabled`);
+      console.log(`📊 Monitoring: Performance tracking enabled`);
+      
+      // Setup graceful shutdown
+      setupGracefulShutdown(server);
       
       // Start watching the projects folder for changes
       await setupProjectsWatcher(); // Re-enabled with better-sqlite3

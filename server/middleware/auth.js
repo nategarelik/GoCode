@@ -1,18 +1,21 @@
 import jwt from 'jsonwebtoken';
 import { userDb } from '../database/db.js';
+import { securityConfig } from '../config/security.js';
 
-// Get JWT secret from environment or use default (for development)
-const JWT_SECRET = process.env.JWT_SECRET || 'claude-ui-dev-secret-change-in-production';
+// Get JWT configuration from security config
+const { jwt: jwtConfig } = securityConfig;
 
 // Optional API key middleware
 const validateApiKey = (req, res, next) => {
+  const { apiKey: apiKeyConfig } = securityConfig;
+  
   // Skip API key validation if not configured
-  if (!process.env.API_KEY) {
+  if (!apiKeyConfig.enabled) {
     return next();
   }
   
-  const apiKey = req.headers['x-api-key'];
-  if (apiKey !== process.env.API_KEY) {
+  const apiKey = req.headers[apiKeyConfig.headerName.toLowerCase()];
+  if (apiKey !== apiKeyConfig.key) {
     return res.status(401).json({ error: 'Invalid API key' });
   }
   next();
@@ -28,7 +31,9 @@ const authenticateToken = async (req, res, next) => {
   }
 
   try {
-    const decoded = jwt.verify(token, JWT_SECRET);
+    const decoded = jwt.verify(token, jwtConfig.secret, {
+      algorithms: [jwtConfig.algorithm]
+    });
     
     // Verify user still exists and is active
     const user = userDb.getUserById(decoded.userId);
@@ -44,15 +49,18 @@ const authenticateToken = async (req, res, next) => {
   }
 };
 
-// Generate JWT token (never expires)
+// Generate JWT token
 const generateToken = (user) => {
   return jwt.sign(
     { 
       userId: user.id, 
       username: user.username 
     },
-    JWT_SECRET
-    // No expiration - token lasts forever
+    jwtConfig.secret,
+    {
+      expiresIn: jwtConfig.expiresIn,
+      algorithm: jwtConfig.algorithm
+    }
   );
 };
 
@@ -63,7 +71,9 @@ const authenticateWebSocket = (token) => {
   }
   
   try {
-    const decoded = jwt.verify(token, JWT_SECRET);
+    const decoded = jwt.verify(token, jwtConfig.secret, {
+      algorithms: [jwtConfig.algorithm]
+    });
     return decoded;
   } catch (error) {
     console.error('WebSocket token verification error:', error);
@@ -75,6 +85,5 @@ export {
   validateApiKey,
   authenticateToken,
   generateToken,
-  authenticateWebSocket,
-  JWT_SECRET
+  authenticateWebSocket
 };

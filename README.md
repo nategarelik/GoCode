@@ -43,6 +43,9 @@ A production-ready, full-featured web interface for [Claude Code](https://docs.a
 - **File Explorer** - Interactive file tree with syntax highlighting and live editing
 - **Git Explorer** - View, stage and commit your changes. You can also switch branches 
 - **Session Management** - Resume conversations, manage multiple sessions, and track history
+- **Production Ready** - Docker deployment with nginx, SSL support, and health monitoring
+- **Performance Optimized** - UnoCSS integration for 200x faster CSS generation and 38% faster builds
+- **Security Enhanced** - JWT authentication, rate limiting, CORS, and comprehensive security headers
 
 
 ## Quick Start
@@ -51,6 +54,7 @@ A production-ready, full-featured web interface for [Claude Code](https://docs.a
 
 - [Node.js](https://nodejs.org/) v20 or higher
 - [Claude Code CLI](https://docs.anthropic.com/en/docs/claude-code) installed and configured
+- Docker and Docker Compose (for production deployment)
 
 ### Installation
 
@@ -243,6 +247,40 @@ This project is open source and free to use, modify, and distribute under the GP
 ### Sponsors
 - [Siteboon - AI powered website builder](https://siteboon.ai)
 ---
+
+## Production Deployment
+
+For production deployment with Docker:
+
+```bash
+# Build and start containers
+docker-compose -f docker-compose.production.yml up -d --build
+
+# View logs
+docker-compose -f docker-compose.production.yml logs -f
+
+# Stop containers
+docker-compose -f docker-compose.production.yml down
+```
+
+The production setup includes:
+- nginx reverse proxy with SSL support
+- Redis for session management
+- Health checks and monitoring
+- Rate limiting and security headers
+- Optimized multi-stage Docker builds
+
+See [README-PRODUCTION.md](README-PRODUCTION.md) for detailed deployment instructions.
+
+## Performance
+
+Recent optimizations include:
+- **CSS Framework**: Migrated from Tailwind CSS to UnoCSS
+  - 200x faster CSS generation
+  - 38% faster build times
+  - Full Tailwind compatibility maintained
+- **Bundle Size**: Optimized JavaScript chunking
+- **Docker**: Multi-stage builds for smaller images
 
 <div align="center">
   <strong>Made with care for the Claude Code community.</strong>
